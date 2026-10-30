@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>세일즈 주간보고 · 관리자</title>
+<link rel="stylesheet" href="common.css">
+<script src="common.js"></script>
+<style>
+.login{max-width:360px;width:100%;padding:24px;display:flex;flex-direction:column;gap:12px;text-align:left}
+.login h1{margin:0;font-size:20px}
+.layout{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+nav.panel{flex:1 1 220px;max-width:100%;padding:10px;display:flex;flex-direction:column;gap:3px}
+main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:14px}
+.navbtn{min-height:44px;width:100%;display:flex;align-items:center;padding:0 12px;border-radius:6px;border:0;background:transparent;cursor:pointer;font-size:14px;text-align:left;color:var(--ink)}
+.navbtn:hover{background:var(--accent-soft)}
+.navbtn[aria-current="true"]{background:var(--accent);color:var(--accent-ink);font-weight:700}
+.navsec{padding:14px 8px 6px}
+.kind{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.02em;padding:3px 12px;border-radius:999px;white-space:nowrap}
+.kind.hq{background:var(--head);color:var(--head-ink)}
+.kind.branch{background:var(--sum);color:#6E5520;border:1px solid #E2CFA4}
+.kindhead{display:flex;align-items:center;gap:10px;margin:6px 0 0}
+.kindhead::after{content:"";flex:1;height:1px;background:var(--line)}
+.weeksel select{min-height:44px;border:1px solid var(--line-strong);border-radius:8px;background:var(--surface);padding:0 12px;font-weight:700}
+.weeksel{display:flex;align-items:center;gap:6px}
+.title{margin:0;font-size:18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.gcard{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.gcard h3{margin:0;font-size:16px}
+.gcard ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.gcard li{font-size:13.5px;color:#4A433D;padding-left:10px;border-left:2px solid var(--line-strong)}
+.gcard li b{display:block;font-size:12px;color:var(--ink-2)}
+.gcard .open{align-self:flex-start;color:var(--accent);font-size:13px;margin-top:auto}
+section.panel{padding:16px 20px}
+article.card{overflow:hidden}
+.phead{padding:12px 20px;background:var(--sub);font-size:16px}
+.phead span{color:var(--ink-2)}
+.secs{padding:4px 20px 12px}
+.sec{display:flex;flex-wrap:wrap;gap:4px 20px;padding:10px 0;border-bottom:1px solid var(--row)}
+.sec:last-child{border-bottom:0}
+.sec .k{flex:0 0 140px;font-size:12px;font-weight:700;color:var(--ink-2);padding-top:1px}
+.sec .v{flex:1 1 300px;min-width:0;font-size:13.5px;white-space:pre-line;overflow-wrap:anywhere}
+.empty{padding:16px 20px;font-size:13.5px;color:var(--ink-2)}
+@media print{nav.panel,.weeksel,.no-print{display:none!important}main{flex-basis:100%}}
+</style>
+</head>
+<body>
+
+<div id="loginView" class="center">
+  <form class="panel login" id="loginForm">
+    <h1>세일즈 주간보고 · 관리자</h1>
+    <label class="lab" for="pw">관리자 비밀번호</label>
+    <input class="input" id="pw" type="password" autocomplete="current-password" required>
+    <button class="btn primary" type="submit" id="loginBtn">들어가기</button>
+  </form>
+</div>
+
+<div id="app" class="wrap" hidden>
+  <header class="top">
+    <h1>세일즈 주간보고</h1>
+    <div class="weeksel">
+      <label for="weekSel" hidden>주차 선택</label>
+      <select id="weekSel"></select>
+      <button type="button" class="btn iconbtn no-print" id="reload" aria-label="새로고침">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 4v5h-5"/></svg>
+      </button>
+    </div>
+  </header>
+  <div class="brandline"></div>
+
+  <div class="layout">
+    <nav class="panel" aria-label="노선 그룹" id="nav"></nav>
+    <main id="main"></main>
+  </div>
+</div>
+
+<script>
+const S = { pw: '', data: null, view: 'summary' };
+
+const KINDS = [['본사', 'hq'], ['판매지점', 'branch']];
+const firstLine = (s) => String(s || '').split('\n')[0].trim();
+const submitted = (p) => p.report && p.report.status === '제출';
+
+function store(pw) { try { sessionStorage.setItem('sr_pw', pw); } catch (e) {} }
+function stored() { try { return sessionStorage.getItem('sr_pw') || ''; } catch (e) { return ''; } }
+
+async function load(weekKey) {
+  const d = await call('admin', S.pw, weekKey || '');
+  S.data = d;
+  if (S.view !== 'summary' && !d.groups.some((g) => g.name === S.view)) S.view = 'summary';
+  render();
+}
+
+async function login(pw) {
+  $('loginBtn').disabled = true;
+  try {
+    S.pw = pw;
+    await load();
+    store(pw);
+    $('loginView').hidden = true;
+    $('app').hidden = false;
+  } catch (e) {
+    S.pw = '';
+    toast(errText(e), true);
+  } finally {
+    $('loginBtn').disabled = false;
+  }
+}
+
+function go(view) { S.view = view; render(); window.scrollTo(0, 0); }
+
+function render() {
+  const d = S.data;
+  $('weekSel').replaceChildren(...d.weeks.map((w) => {
+    const o = el('option', { value: w.key, text: w.label });
+    o.selected = w.key === d.week.key;
+    return o;
+  }));
+  renderNav();
+  if (S.view === 'summary') renderSummary(); else renderGroup(d.groups.find((g) => g.name === S.view));
+}
+
+function navBtn(label, key) {
+  const b = el('button', { type: 'button', class: 'navbtn', 'aria-current': S.view === key ? 'true' : 'false', text: label });
+  b.onclick = () => go(key);
+  return b;
+}
+
+function renderNav() {
+  const nav = $('nav');
+  nav.replaceChildren(navBtn('전체 요약', 'summary'));
+  KINDS.forEach(([kind, cls]) => {
+    nav.append(el('div', { class: 'navsec' }, el('span', { class: 'kind ' + cls, text: kind })));
+    S.data.groups.filter((g) => g.kind === kind).forEach((g) => nav.append(navBtn(g.name, g.name)));
+  });
+}
+
+// 그룹 카드: 세일즈별 '시장·경쟁 동향 및 이슈' 첫 줄
+function renderSummary() {
+  const key = S.data.fields[0].key;
+  const card = (g) => {
+    const lines = g.people.filter(submitted).filter((p) => firstLine(p.report[key]))
+      .map((p) => el('li', {}, el('b', { text: p.name }), firstLine(p.report[key])));
+    const b = el('button', { type: 'button', class: 'btn open no-print', text: '세일즈별 보고 보기' });
+    b.onclick = () => go(g.name);
+    return el('div', { class: 'card gcard' },
+      el('h3', { text: g.name }),
+      lines.length ? el('ul', {}, lines) : el('div', { class: 'hint', text: '이번 주 보고가 아직 없습니다.' }),
+      b);
+  };
+  $('main').replaceChildren(
+    el('h2', { class: 'title', text: '전체 요약 · ' + S.data.week.short }),
+    ...KINDS.flatMap(([kind, cls]) => [
+      el('div', { class: 'kindhead' }, el('span', { class: 'kind ' + cls, text: kind })),
+      el('div', { class: 'grid' }, S.data.groups.filter((g) => g.kind === kind).map(card))
+    ]));
+}
+
+function renderGroup(g) {
+  const people = g.people.map((p) => {
+    const r = p.report;
+    const head = el('div', { class: 'phead' }, el('strong', { text: p.name }), el('span', { text: ' (' + (p.routes || '담당노선 미입력') + ')' }));
+    const body = submitted(p)
+      ? el('div', { class: 'secs' },
+          S.data.fields.map((f) => el('div', { class: 'sec' }, el('div', { class: 'k', text: f.label }), el('div', { class: 'v', text: r[f.key] || '-' }))),
+          r.files && r.files.length ? el('div', { class: 'sec' }, el('div', { class: 'k', text: '첨부' }),
+            el('div', { class: 'v' }, r.files.map((f) => el('div', {}, el('a', { href: f.url, target: '_blank', rel: 'noopener', text: f.name }))))) : null)
+      : el('div', { class: 'empty', text: '이번 주 보고가 아직 없습니다.' });
+    return el('article', { class: 'card' }, head, body);
+  });
+  $('main').replaceChildren(el('section', { class: 'panel' }, el('h2', { class: 'title', text: g.name + ' · ' + S.data.week.short })), ...people);
+}
+
+$('loginForm').addEventListener('submit', (e) => { e.preventDefault(); login($('pw').value.trim()); });
+$('weekSel').addEventListener('change', (e) => load(e.target.value).catch((err) => toast(errText(err), true)));
+$('reload').addEventListener('click', () => load(S.data.week.key).then(() => toast('새로고침했습니다.')).catch((err) => toast(errText(err), true)));
+
+const saved = stored();
+if (saved) login(saved);
+</script>
+</body>
+</html>

@@ -1,0 +1,53 @@
+/* 동시점 판매추이 대시보드와 같은 Trinity 로즈골드 팔레트 */
+:root{
+  --ground:#F7F4F0; --surface:#FFFFFF; --ink:#3B3530; --ink-2:#6A615A; --dim:#8F857C;
+  --line:#E9E3DC; --line-strong:#D3C9BF; --row:#F1ECE6;
+  --accent:#9A5E54; --accent-deep:#7A463E; --accent-ink:#FFFFFF; --accent-soft:#F5E8E4;
+  --warn:#B8392F; --warn-soft:#F7E7E2; --sum:#F6EEDD; --sub:#EFEDEA;
+  --head:#4A433D; --head-ink:#F6F0E9;
+  --brand:linear-gradient(90deg,#D9A99C 0%,#D8BD86 55%,#CFCBC6 100%);
+  --shadow:0 1px 2px rgba(59,53,48,.05),0 4px 16px rgba(59,53,48,.05);
+  --font:'Daemyung','Malgun Gothic','Apple SD Gothic Neo',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.55}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)} a:hover{color:var(--accent-deep)}
+
+.wrap{max-width:1280px;margin:0 auto;padding:20px 20px 48px;display:flex;flex-direction:column;gap:14px}
+.wrap.narrow{max-width:880px}
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.top h1{margin:0;font-size:24px;font-weight:700;letter-spacing:-.01em}
+.top h1 small{font-size:12px;font-weight:700;color:var(--ink-2);margin-left:6px}
+.meta{margin-top:4px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;font-size:13px;color:var(--ink-2)}
+.meta b{color:var(--ink)}
+.brandline{height:3px;border-radius:2px;background:var(--brand)}
+.cap{font-weight:700;font-size:12px;padding:2px 8px;border-radius:4px;background:var(--head);color:var(--head-ink);letter-spacing:.02em;white-space:nowrap}
+.pill{font-size:12px;padding:2px 10px;border-radius:999px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);white-space:nowrap}
+.pill.warn{background:var(--warn-soft);border-color:#E9C9C0;color:var(--warn);font-weight:700}
+.pill.draft{background:var(--sum);border-color:#E6D6B4;color:#7A5A1E;font-weight:700}
+.notice{font-size:13px;background:var(--accent-soft);color:var(--accent-deep);padding:6px 12px;border-radius:6px;font-weight:700;display:inline-flex;align-items:center;gap:8px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.lab{font-size:11.5px;font-weight:700;letter-spacing:.04em;color:var(--ink-2)}
+.hint{font-size:12.5px;color:var(--ink-2)}
+
+.btn{min-height:44px;padding:0 18px;border-radius:8px;border:1px solid var(--line-strong);background:var(--surface);font-weight:700;cursor:pointer}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{background:var(--accent-deep);color:var(--accent-ink)}
+.btn:disabled{opacity:.55;cursor:default}
+.iconbtn{width:44px;height:44px;padding:0;display:inline-flex;align-items:center;justify-content:center}
+
+.input,textarea.input{width:100%;border:1px solid var(--line-strong);border-radius:8px;padding:10px 12px;background:var(--surface);font-size:14px}
+textarea.input{resize:vertical;min-height:84px}
+input.input{min-height:44px;padding:0 12px}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--head);color:var(--head-ink);padding:10px 18px;border-radius:8px;font-weight:700;box-shadow:var(--shadow);z-index:50;max-width:calc(100vw - 32px)}
+.toast.err{background:var(--warn);color:#fff}
+.center{min-height:60vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--ink-2);text-align:center;padding:16px}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+[hidden]{display:none!important}

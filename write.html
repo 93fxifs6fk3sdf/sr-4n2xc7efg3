@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>주간 세일즈 보고 작성</title>
+<link rel="stylesheet" href="common.css">
+<script src="common.js"></script>
+<style>
+.info{display:grid;grid-template-columns:1fr 1fr 2fr;padding:14px 20px}
+.info>div{display:flex;flex-direction:column;gap:3px;min-width:0}
+.info>div+div{padding-left:16px;border-left:1px solid var(--line)}
+.info .val{font-weight:700;font-size:15px}
+@media (max-width:640px){
+  .info{grid-template-columns:1fr 1fr}
+  .info>div:last-child{grid-column:1/-1;padding-left:0;border-left:0;padding-top:10px;margin-top:10px;border-top:1px solid var(--line)}
+}
+form.panel{padding:20px;display:flex;flex-direction:column;gap:18px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field>label{font-weight:700}
+.files{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.files li{display:flex;align-items:center;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:8px;padding:4px 4px 4px 12px;font-size:13px}
+.files li a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:18px}
+.foot .btns{display:flex;gap:8px;flex-wrap:wrap}
+.closed{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:12px 16px;font-weight:700}
+</style>
+</head>
+<body>
+<div id="loading" class="center"><div class="spin" aria-hidden="true"></div>불러오는 중…</div>
+<div id="fail" class="center" hidden></div>
+
+<div id="app" class="wrap narrow" hidden>
+  <header class="top">
+    <div>
+      <h1>주간 세일즈 보고 작성</h1>
+      <div class="meta"><span class="cap" id="weekNo"></span><span id="weekRange"></span></div>
+    </div>
+    <div class="notice">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      <span>마감 <span id="deadline"></span></span>
+    </div>
+  </header>
+  <div class="brandline"></div>
+
+  <section class="card info">
+    <div><span class="lab">작성자</span><span class="val" id="pName"></span></div>
+    <div><span class="lab">노선 그룹</span><span class="val" id="pGroup"></span></div>
+    <div>
+      <label class="lab" for="routes">담당 노선 <span style="color:var(--accent)">· 직접 입력</span></label>
+      <input class="input" id="routes" type="text" maxlength="200" placeholder="예) 방콕, 다낭">
+    </div>
+  </section>
+  <div class="hint" style="margin-top:-6px">담당 노선은 처음 한 번 입력하면 다음 주부터 자동으로 채워집니다. 담당이 바뀌면 고쳐 주세요.</div>
+
+  <div class="closed" id="closed" hidden>지금은 작성 기간이 아닙니다. 작성 기간은 월 14:00 ~ 금 12:00입니다.</div>
+
+  <form class="panel" id="form" autocomplete="off">
+    <div id="fields" style="display:flex;flex-direction:column;gap:18px"></div>
+
+    <div class="field">
+      <span style="font-weight:700">첨부 (선택)</span>
+      <ul class="files" id="fileList"></ul>
+      <div><label class="btn" style="display:inline-flex;align-items:center;gap:6px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.5l-8.5 8.5a5 5 0 0 1-7-7L14 5.5a3.3 3.3 0 0 1 4.7 4.7l-8.5 8.5a1.7 1.7 0 0 1-2.4-2.4L15.5 8.6"/></svg>
+        파일 추가<input type="file" id="fileInput" hidden></label>
+        <span class="hint" style="margin-left:8px">10MB 이하</span></div>
+    </div>
+
+    <div class="foot">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span class="pill" id="status">미작성</span>
+        <span class="hint" id="savedAt"></span>
+      </div>
+      <div class="btns">
+        <button type="button" class="btn" id="draftBtn">임시저장</button>
+        <button type="submit" class="btn primary" id="submitBtn">제출하기</button>
+      </div>
+    </div>
+  </form>
+  <div class="hint">마감 전까지 언제든 고쳐서 다시 제출할 수 있습니다.</div>
+</div>
+
+<script>
+const TOKEN = (new URLSearchParams(location.search).get('t') || '').replace(/[^A-Za-z0-9]/g, '');
+let state = { files: [], dirty: false, busy: false, open: true };
+
+function render(d) {
+  $('weekNo').textContent = d.week.short;
+  $('weekRange').textContent = d.week.range;
+  $('deadline').textContent = d.week.deadline;
+  $('pName').textContent = d.person.name;
+  $('pGroup').textContent = d.person.group;
+  $('routes').value = d.person.routes || '';
+
+  const r = d.report || {};
+  const box = $('fields');
+  d.fields.forEach((f) => {
+    const id = 'f_' + f.key;
+    const field = el('div', { class: 'field' },
+      el('label', { for: id, text: f.label }),
+      f.hint ? el('div', { class: 'hint', text: f.hint }) : null,
+      el('textarea', { class: 'input', id, rows: 3, maxlength: 5000, placeholder: f.ph || false })
+    );
+    box.append(field);
+    field.querySelector('textarea').value = r[f.key] || '';
+  });
+
+  state.files = (r.files || []).slice();
+  renderFiles();
+  setStatus(r.status, r.updatedAt);
+
+  state.open = d.open;
+  $('closed').hidden = d.open;
+  document.querySelectorAll('#app textarea, #app input, #app button').forEach((n) => { if (!d.open) n.disabled = true; });
+
+  $('loading').hidden = true;
+  $('app').hidden = false;
+}
+
+function setStatus(status, at) {
+  const s = $('status');
+  s.className = 'pill' + (status === '임시저장' ? ' draft' : '');
+  s.textContent = status === '제출' ? '제출 완료' : status === '임시저장' ? '임시저장됨' : '미작성';
+  $('savedAt').textContent = at ? '마지막 저장 ' + at : '';
+  $('submitBtn').textContent = status === '제출' ? '수정 내용 제출' : '제출하기';
+}
+
+function renderFiles() {
+  const ul = $('fileList');
+  ul.replaceChildren();
+  state.files.forEach((f, i) => {
+    const rm = el('button', { type: 'button', class: 'btn iconbtn', 'aria-label': f.name + ' 첨부 삭제' }, '×');
+    rm.onclick = () => { state.files.splice(i, 1); state.dirty = true; renderFiles(); };
+    ul.append(el('li', {}, el('a', { href: f.url, target: '_blank', rel: 'noopener', text: f.name }), rm));
+  });
+}
+
+function payload() {
+  const p = { routes: $('routes').value, files: state.files };
+  document.querySelectorAll('#fields textarea').forEach((t) => { p[t.id.slice(2)] = t.value; });
+  return p;
+}
+
+async function save(submit) {
+  if (state.busy) return;
+  if (submit) {
+    const empty = [...document.querySelectorAll('#fields textarea')].filter((t) => !t.value.trim());
+    if (empty.length) {
+      toast('비어 있는 항목이 있습니다: ' + empty.map((t) => t.closest('.field').querySelector('label').textContent).join(', '), true);
+      empty[0].focus();
+      return;
+    }
+  }
+  state.busy = true;
+  $('draftBtn').disabled = $('submitBtn').disabled = true;
+  try {
+    const res = await call('saveReport', TOKEN, payload(), submit);
+    state.dirty = false;
+    setStatus(res.status, res.savedAt);
+    toast(submit ? '제출했습니다. 마감 전까지 고칠 수 있습니다.' : '임시저장했습니다.');
+  } catch (e) {
+    toast(errText(e), true);
+  } finally {
+    state.busy = false;
+    $('draftBtn').disabled = $('submitBtn').disabled = !state.open;
+  }
+}
+
+$('form').addEventListener('submit', (e) => { e.preventDefault(); save(true); });
+$('draftBtn').addEventListener('click', () => save(false));
+$('app').addEventListener('input', () => { state.dirty = true; });
+window.addEventListener('beforeunload', (e) => { if (state.dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+$('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) { toast('10MB 이하 파일만 올릴 수 있습니다.', true); return; }
+  toast('업로드 중… ' + file.name);
+  try {
+    const b64 = await new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result).split(',')[1]);
+      fr.onerror = reject;
+      fr.readAsDataURL(file);
+    });
+    const saved = await call('uploadFile', TOKEN, { name: file.name, mime: file.type, b64 });
+    state.files.push(saved);
+    state.dirty = true;
+    renderFiles();
+    toast('첨부했습니다. 저장이나 제출을 눌러야 반영됩니다.');
+  } catch (err) {
+    toast(errText(err), true);
+  }
+});
+
+call('getForm', TOKEN).then(render).catch((e) => {
+  $('loading').hidden = true;
+  $('fail').hidden = false;
+  $('fail').textContent = errText(e);
+});
+</script>
+</body>
+</html>
