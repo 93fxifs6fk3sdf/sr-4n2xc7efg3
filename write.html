@@ -25,6 +25,10 @@ form.panel{padding:20px;display:flex;flex-direction:column;gap:18px}
 .foot{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:18px}
 .foot .btns{display:flex;gap:8px;flex-wrap:wrap}
 .closed{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:12px 16px;font-weight:700}
+dialog{border:0;border-radius:12px;padding:28px 28px 22px;width:min(380px,calc(100vw - 32px));background:var(--surface);color:var(--ink);box-shadow:0 12px 40px rgba(59,53,48,.25);text-align:center}
+dialog::backdrop{background:rgba(59,53,48,.45)}
+dialog h2{margin:0 0 8px;font-size:18px}
+dialog p{margin:0 0 20px;color:var(--ink-2);line-height:1.6}
 </style>
 </head>
 <body>
@@ -82,12 +86,19 @@ form.panel{padding:20px;display:flex;flex-direction:column;gap:18px}
   <div class="hint">마감 전까지 언제든 고쳐서 다시 제출할 수 있습니다.</div>
 </div>
 
+<dialog id="doneDialog" aria-labelledby="doneTitle">
+  <h2 id="doneTitle">제출되었습니다</h2>
+  <p><span id="doneWeek"></span> 보고가 제출되었습니다.<br>마감 전까지 고쳐서 다시 제출할 수 있습니다.</p>
+  <form method="dialog"><button class="btn primary" autofocus>확인</button></form>
+</dialog>
+
 <script>
 const TOKEN = (new URLSearchParams(location.search).get('t') || '').replace(/[^A-Za-z0-9]/g, '');
 let state = { files: [], dirty: false, busy: false, open: true };
 
 function render(d) {
   $('weekNo').textContent = d.week.short;
+  $('doneWeek').textContent = d.week.short;
   $('weekRange').textContent = d.week.range;
   $('deadline').textContent = d.week.deadline;
   $('pName').textContent = d.person.name;
@@ -159,7 +170,7 @@ async function save(submit) {
     const res = await call('saveReport', TOKEN, payload(), submit);
     state.dirty = false;
     setStatus(res.status, res.savedAt);
-    toast(submit ? '제출했습니다. 마감 전까지 고칠 수 있습니다.' : '임시저장했습니다.');
+    if (submit) $('doneDialog').showModal(); else toast('임시저장했습니다.');
   } catch (e) {
     toast(errText(e), true);
   } finally {
