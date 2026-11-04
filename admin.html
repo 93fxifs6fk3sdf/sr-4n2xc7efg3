@@ -69,7 +69,7 @@ article.card{overflow:hidden}
   <div class="brandline"></div>
 
   <div class="layout">
-    <nav class="panel" aria-label="노선 그룹" id="nav"></nav>
+    <nav class="panel" aria-label="팀" id="nav"></nav>
     <main id="main"></main>
   </div>
 </div>
@@ -159,7 +159,7 @@ function renderSummary() {
 function renderGroup(g) {
   const people = g.people.map((p) => {
     const r = p.report;
-    const head = el('div', { class: 'phead' }, el('strong', { text: p.name }), el('span', { text: ' (' + (p.routes || '담당노선 미입력') + ')' }));
+    const head = el('div', { class: 'phead' }, el('strong', { text: p.name }), el('span', { text: ' (' + (p.routes || (g.routesLabel || '담당노선') + ' 미입력') + ')' }));
     const body = submitted(p)
       ? el('div', { class: 'secs' },
           S.data.fields.map((f) => el('div', { class: 'sec' }, el('div', { class: 'k', text: f.label }), el('div', { class: 'v', text: r[f.key] || '-' }))),
