@@ -77,7 +77,7 @@ article.card{overflow:hidden}
 <script>
 const S = { pw: '', data: null, view: 'summary' };
 
-const KINDS = [['본사', 'hq'], ['판매지점', 'branch']];
+const KINDS = [['본사', 'hq'], ['국내판매지점', 'branch'], ['해외판매지점', 'branch']];
 const firstLine = (s) => String(s || '').split('\n')[0].trim();
 const submitted = (p) => p.report && p.report.status === '제출';
 
