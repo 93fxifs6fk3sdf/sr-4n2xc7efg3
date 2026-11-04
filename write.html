@@ -110,9 +110,9 @@ function render(d) {
   d.fields.forEach((f) => {
     const id = 'f_' + f.key;
     const field = el('div', { class: 'field' },
-      el('label', { for: id, text: f.label }),
+      el('label', { for: id, text: f.label + (f.required ? ' (필수)' : '') }),
       f.hint ? el('div', { class: 'hint', text: f.hint }) : null,
-      el('textarea', { class: 'input', id, rows: 3, maxlength: 5000, placeholder: f.ph || false })
+      el('textarea', { class: 'input', id, rows: 3, maxlength: 5000, placeholder: f.ph || false, 'data-required': f.required ? f.label : false })
     );
     box.append(field);
     field.querySelector('textarea').value = r[f.key] || '';
@@ -157,9 +157,9 @@ function payload() {
 async function save(submit) {
   if (state.busy) return;
   if (submit) {
-    const empty = [...document.querySelectorAll('#fields textarea')].filter((t) => !t.value.trim());
+    const empty = [...document.querySelectorAll('#fields textarea[data-required]')].filter((t) => !t.value.trim());
     if (empty.length) {
-      toast('비어 있는 항목이 있습니다: ' + empty.map((t) => t.closest('.field').querySelector('label').textContent).join(', '), true);
+      toast(empty[0].dataset.required + ' 항목은 한 줄 이상 적어 주세요.', true);
       empty[0].focus();
       return;
     }
