@@ -1,4 +1,4 @@
-// 세일즈 주간보고 화면 공통 (GitHub Pages)
+// 주간 판매활동 보고 화면 공통 (GitHub Pages)
 // 데이터는 구글 Apps Script 웹앱(API)과 주고받습니다. apps-script/Code.gs 의 WEBAPP_URL 과 같아야 함
 const API = 'https://script.google.com/macros/s/AKfycbz2xqr4g_7nrShEAmmvsPB4yfPk8MZNSv88BR0dfGs0QTF3C2Q1zF1fXrmnaaa102CU/exec';
 
